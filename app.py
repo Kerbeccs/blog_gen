@@ -74,6 +74,8 @@ def fetch_images_from_unsplash(query, count=1):
         print(f"Error fetching images: {e}")
         return []
 
+    
+
 def replace_image_placeholders(blog_content):
     import re
     
@@ -95,7 +97,7 @@ def replace_image_placeholders(blog_content):
                      alt="{description}"
                      loading="lazy" 
                      class="blog-image"
-                     onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIG5vdCBhdmFpbGFibGU8L3RleHQ+PC9zdmc+';"
+                     onerror="this.onerror=null; this.src='/static/placeholder.jpg';"
                 />
             </div>
             '''
@@ -195,6 +197,7 @@ def generate_blog(topic):
         
         raise Exception("Max retries exceeded")
         
+        return final_content
     except Exception as e:
         print(f"Error generating blog: {e}")
         return f"An error occurred: {e}"
@@ -202,6 +205,7 @@ def generate_blog(topic):
 def format_blog_content(raw_content):
     formatted_content = ""
 
+ 
     lines = raw_content.split("\n")
     for line in lines:
         line = line.strip()
@@ -215,6 +219,9 @@ def format_blog_content(raw_content):
             formatted_content += f"{line.replace('**', '')}\n"
         elif "**" in line:
             formatted_content += f"<p>{line.replace('**', '<b>').replace('**', '</b>')}</p>\n"
+        elif "" in line:  
+            bold_text = line.replace("", "<b>").replace("</b>", "")
+            formatted_content += f"<p>{bold_text}</p>\n"
         elif line:  
             formatted_content += f"<p>{line}</p>\n"
         else: 
@@ -223,54 +230,51 @@ def format_blog_content(raw_content):
     return formatted_content
 
 def blog_generator():
-    print("🚀 Blog generator function started successfully!")
+
     global latest_blog, processing_status
-    
-    try:
-        while True:
-            print("🔍 Checking queue...")
-            if not topic_queue.empty():
-                topic = topic_queue.get()
-                print(f"📝 Found topic in queue: {topic}")
-                try:
-                    processing_status = {"current_topic": topic, "status": "processing"}
-                    print(f"Generating blog for topic: {topic}")
-                    content = generate_blog(topic)
-                    if content and not content.startswith("An error occurred"):
-                        latest_blog = {
-                            "content": content,
-                            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            "topic": topic
-                        }
-                        processing_status = {"current_topic": None, "status": "idle"}
-                        print(f"✅ Successfully generated blog for: {topic}")
-                    else:
-                        print(f"❌ Failed to generate valid content for: {topic}")
-                        processing_status = {"current_topic": None, "status": "error"}
-                except Exception as e:
-                    print(f"❌ Error in blog generator for topic {topic}: {e}")
+    while True:
+        if not topic_queue.empty():
+            topic = topic_queue.get()
+            try:
+                processing_status = {"current_topic": topic, "status": "processing"}
+                print(f"Generating blog for topic: {topic}")
+                content = generate_blog(topic)
+                if content and not content.startswith("An error occurred"):
+                    latest_blog = {
+                        "content": content,
+                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "topic": topic
+                    }
+                    processing_status = {"current_topic": None, "status": "idle"}
+                    print(f"Successfully generated blog for: {topic}")
+                else:
+                    print(f"Failed to generate valid content for: {topic}")
                     processing_status = {"current_topic": None, "status": "error"}
-                topic_queue.task_done()
-            time.sleep(1)  # Faster checking
-    except Exception as e:
-        print(f"💥 FATAL ERROR in blog generator: {e}")
-        import traceback
-        traceback.print_exc()
+            except Exception as e:
+                print(f"Error in blog generator for topic {topic}: {e}")
+                processing_status = {"current_topic": None, "status": "error"}
+            topic_queue.task_done()
+        time.sleep(5)
+
+# Start the blog generator thread
+print("Starting blog generator thread...")
+threading.Thread(target=blog_generator, daemon=True).start()
+print("Blog generator thread started.")
+
 @app.route('/')
 def index():
-    print("Serving index.html")
     return render_template('index.html')
 
 @app.route('/add_topics', methods=['POST'])
 def add_topics():
-    print("Received add_topics request")
+   
     data = request.get_json()
     topics = data.get('topics', '').split(',')
     topics = [topic.strip() for topic in topics if topic.strip()]
-
+    
     for topic in topics:
         topic_queue.put(topic)
-
+    
     return jsonify({
         "message": f"Added {len(topics)} topics to queue",
         "queue_size": topic_queue.qsize()
@@ -278,7 +282,7 @@ def add_topics():
 
 @app.route('/queue_status', methods=['GET'])
 def get_queue_status():
-    print("Received queue_status request")
+   
     return jsonify({
         "queue_size": topic_queue.qsize(),
         "current_processing": processing_status
@@ -286,26 +290,9 @@ def get_queue_status():
 
 @app.route('/latest_blog', methods=['GET'])
 def get_latest_blog():
-    print("Received latest_blog request")
+   
     return jsonify(latest_blog)
 
-@app.route('/health')
-def health_check():
-    return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
-
-# At the bottom of your file, replace this section:
 if __name__ == '__main__':
-    print("Starting application...")
-    
-    # Start the blog generator thread with better error handling
-    try:
-        print("Attempting to start blog generator thread...")
-        thread = threading.Thread(target=blog_generator, daemon=True)
-        thread.start()
-        print(f"Blog generator thread started successfully. Thread alive: {thread.is_alive()}")
-    except Exception as e:
-        print(f"ERROR starting blog generator thread: {e}")
-    
-    port = int(os.environ.get('PORT', 5000))
-    print(f"Starting Flask app on port {port}")
-    app.run(host='0.0.0.0', port=port, debug=False)
+    threading.Thread(target=blog_generator, daemon=True).start()
+    app.run(debug=True)
