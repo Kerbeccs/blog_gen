@@ -11,15 +11,24 @@ import os
 
 app = Flask(__name__)
 
-# Load environment variables from .env file
-with open('.env', 'r') as f:
-    for line in f:
-        if '=' in line:
-            key, value = line.strip().split('=', 1)
-            os.environ[key] = value
+# Load environment variables from .env file (for local development)
+try:
+    with open('.env', 'r') as f:
+        for line in f:
+            if '=' in line:
+                key, value = line.strip().split('=', 1)
+                os.environ[key] = value
+    print("Loaded environment variables from .env file")
+except FileNotFoundError:
+    print("No .env file found, assuming environment variables are set externally")
 
 api_key = os.getenv('GEMINI_API_KEY')
 unsplash_access_key = os.getenv('UNSPLASH_ACCESS_KEY')
+
+if not api_key:
+    print("ERROR: GEMINI_API_KEY not found")
+if not unsplash_access_key:
+    print("ERROR: UNSPLASH_ACCESS_KEY not found")
 
 # Configure Gemini API
 genai.configure(api_key=api_key)
