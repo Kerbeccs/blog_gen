@@ -265,7 +265,7 @@ print("Blog generator thread started.")
 def index():
     print("Serving index.html")
     return render_template('index.html')
-@app.route('/')
+
 @app.route('/add_topics', methods=['POST'])
 def add_topics():
     print("Received add_topics request")
@@ -280,8 +280,7 @@ def add_topics():
         "message": f"Added {len(topics)} topics to queue",
         "queue_size": topic_queue.qsize()
     })
-def index():
-    return render_template('index.html')
+
 @app.route('/queue_status', methods=['GET'])
 def get_queue_status():
     print("Received queue_status request")
@@ -293,33 +292,6 @@ def get_queue_status():
 @app.route('/latest_blog', methods=['GET'])
 def get_latest_blog():
     print("Received latest_blog request")
-    return jsonify(latest_blog)
-@app.route('/add_topics', methods=['POST'])
-def add_topics():
-   
-    data = request.get_json()
-    topics = data.get('topics', '').split(',')
-    topics = [topic.strip() for topic in topics if topic.strip()]
-    
-    for topic in topics:
-        topic_queue.put(topic)
-    
-    return jsonify({
-        "message": f"Added {len(topics)} topics to queue",
-        "queue_size": topic_queue.qsize()
-    })
-
-@app.route('/queue_status', methods=['GET'])
-def get_queue_status():
-   
-    return jsonify({
-        "queue_size": topic_queue.qsize(),
-        "current_processing": processing_status
-    })
-
-@app.route('/latest_blog', methods=['GET'])
-def get_latest_blog():
-   
     return jsonify(latest_blog)
 
 if __name__ == '__main__':
