@@ -229,7 +229,7 @@ def format_blog_content(raw_content):
     return formatted_content
 
 def blog_generator():
-    
+
     global latest_blog, processing_status
     while True:
         if not topic_queue.empty():
@@ -254,6 +254,9 @@ def blog_generator():
                 processing_status = {"current_topic": None, "status": "error"}
             topic_queue.task_done()
         time.sleep(5)
+
+# Start the blog generator thread
+threading.Thread(target=blog_generator, daemon=True).start()
 
 @app.route('/')
 def index():
