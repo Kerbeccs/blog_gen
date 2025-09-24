@@ -108,6 +108,7 @@ def replace_image_placeholders(blog_content):
     return modified_content
 
 def generate_blog(topic):
+    print(f"Starting blog generation for topic: {topic}")
     long_tail_keywords = [
         f"best {topic} recommendations",
         f"top {topic} tips",
@@ -256,12 +257,43 @@ def blog_generator():
         time.sleep(5)
 
 # Start the blog generator thread
+print("Starting blog generator thread...")
 threading.Thread(target=blog_generator, daemon=True).start()
+print("Blog generator thread started.")
 
 @app.route('/')
 def index():
+    print("Serving index.html")
     return render_template('index.html')
+@app.route('/')
+@app.route('/add_topics', methods=['POST'])
+def add_topics():
+    print("Received add_topics request")
+    data = request.get_json()
+    topics = data.get('topics', '').split(',')
+    topics = [topic.strip() for topic in topics if topic.strip()]
 
+    for topic in topics:
+        topic_queue.put(topic)
+
+    return jsonify({
+        "message": f"Added {len(topics)} topics to queue",
+        "queue_size": topic_queue.qsize()
+    })
+def index():
+    return render_template('index.html')
+@app.route('/queue_status', methods=['GET'])
+def get_queue_status():
+    print("Received queue_status request")
+    return jsonify({
+        "queue_size": topic_queue.qsize(),
+        "current_processing": processing_status
+    })
+
+@app.route('/latest_blog', methods=['GET'])
+def get_latest_blog():
+    print("Received latest_blog request")
+    return jsonify(latest_blog)
 @app.route('/add_topics', methods=['POST'])
 def add_topics():
    
