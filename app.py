@@ -230,6 +230,33 @@ def format_blog_content(raw_content):
     return formatted_content
 
 def blog_generator():
+    print("Blog generator function started")
+    global latest_blog, processing_status
+    while True:
+        print("Checking queue...")
+        if not topic_queue.empty():
+            topic = topic_queue.get()
+            try:
+                processing_status = {"current_topic": topic, "status": "processing"}
+                print(f"Generating blog for topic: {topic}")
+                content = generate_blog(topic)
+                if content and not content.startswith("An error occurred"):
+                    latest_blog = {
+                        "content": content,
+                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "topic": topic
+                    }
+                    processing_status = {"current_topic": None, "status": "idle"}
+                    print(f"Successfully generated blog for: {topic}")
+                else:
+                    print(f"Failed to generate valid content for: {topic}")
+                    processing_status = {"current_topic": None, "status": "error"}
+            except Exception as e:
+                print(f"Error in blog generator for topic {topic}: {e}")
+                processing_status = {"current_topic": None, "status": "error"}
+            topic_queue.task_done()
+        time.sleep(5)
+def blog_generator():
 
     global latest_blog, processing_status
     while True:
