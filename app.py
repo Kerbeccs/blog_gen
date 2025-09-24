@@ -223,38 +223,39 @@ def format_blog_content(raw_content):
     return formatted_content
 
 def blog_generator():
-    print("Blog generator function started")
+    print("🚀 Blog generator function started successfully!")
     global latest_blog, processing_status
-    while True:
-        print("Checking queue...")
-        if not topic_queue.empty():
-            topic = topic_queue.get()
-            try:
-                processing_status = {"current_topic": topic, "status": "processing"}
-                print(f"Generating blog for topic: {topic}")
-                content = generate_blog(topic)
-                if content and not content.startswith("An error occurred"):
-                    latest_blog = {
-                        "content": content,
-                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        "topic": topic
-                    }
-                    processing_status = {"current_topic": None, "status": "idle"}
-                    print(f"Successfully generated blog for: {topic}")
-                else:
-                    print(f"Failed to generate valid content for: {topic}")
+    
+    try:
+        while True:
+            print("🔍 Checking queue...")
+            if not topic_queue.empty():
+                topic = topic_queue.get()
+                print(f"📝 Found topic in queue: {topic}")
+                try:
+                    processing_status = {"current_topic": topic, "status": "processing"}
+                    print(f"Generating blog for topic: {topic}")
+                    content = generate_blog(topic)
+                    if content and not content.startswith("An error occurred"):
+                        latest_blog = {
+                            "content": content,
+                            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            "topic": topic
+                        }
+                        processing_status = {"current_topic": None, "status": "idle"}
+                        print(f"✅ Successfully generated blog for: {topic}")
+                    else:
+                        print(f"❌ Failed to generate valid content for: {topic}")
+                        processing_status = {"current_topic": None, "status": "error"}
+                except Exception as e:
+                    print(f"❌ Error in blog generator for topic {topic}: {e}")
                     processing_status = {"current_topic": None, "status": "error"}
-            except Exception as e:
-                print(f"Error in blog generator for topic {topic}: {e}")
-                processing_status = {"current_topic": None, "status": "error"}
-            topic_queue.task_done()
-        time.sleep(5)
-
-# Start the blog generator thread
-print("Starting blog generator thread...")
-threading.Thread(target=blog_generator, daemon=True).start()
-print("Blog generator thread started.")
-
+                topic_queue.task_done()
+            time.sleep(1)  # Faster checking
+    except Exception as e:
+        print(f"💥 FATAL ERROR in blog generator: {e}")
+        import traceback
+        traceback.print_exc()
 @app.route('/')
 def index():
     print("Serving index.html")
@@ -292,6 +293,19 @@ def get_latest_blog():
 def health_check():
     return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
 
+# At the bottom of your file, replace this section:
 if __name__ == '__main__':
+    print("Starting application...")
+    
+    # Start the blog generator thread with better error handling
+    try:
+        print("Attempting to start blog generator thread...")
+        thread = threading.Thread(target=blog_generator, daemon=True)
+        thread.start()
+        print(f"Blog generator thread started successfully. Thread alive: {thread.is_alive()}")
+    except Exception as e:
+        print(f"ERROR starting blog generator thread: {e}")
+    
     port = int(os.environ.get('PORT', 5000))
+    print(f"Starting Flask app on port {port}")
     app.run(host='0.0.0.0', port=port, debug=False)
