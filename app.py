@@ -229,31 +229,35 @@ def format_blog_content(raw_content):
 
     return formatted_content
 
+# ... inside the blog_generator function
 def blog_generator():
-
     global latest_blog, processing_status
     while True:
         if not topic_queue.empty():
             topic = topic_queue.get()
             try:
+                print(f"DEBUG: Processing topic '{topic}' from queue.")
                 processing_status = {"current_topic": topic, "status": "processing"}
-                print(f"Generating blog for topic: {topic}")
-                content = generate_blog(topic)
-                if content and not content.startswith("An error occurred"):
-                    latest_blog = {
-                        "content": content,
-                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        "topic": topic
-                    }
-                    processing_status = {"current_topic": None, "status": "idle"}
-                    print(f"Successfully generated blog for: {topic}")
-                else:
-                    print(f"Failed to generate valid content for: {topic}")
+                
+                # Check if API keys are loaded correctly
+                if not api_key:
+                    print("ERROR: GEMINI_API_KEY is not set.")
                     processing_status = {"current_topic": None, "status": "error"}
+                    topic_queue.task_done()
+                    continue
+                if not unsplash_access_key:
+                    print("ERROR: UNSPLASH_ACCESS_KEY is not set.")
+                    processing_status = {"current_topic": None, "status": "error"}
+                    topic_queue.task_done()
+                    continue
+
+                content = generate_blog(topic)
+                # ... rest of the code
             except Exception as e:
-                print(f"Error in blog generator for topic {topic}: {e}")
+                print(f"CRITICAL ERROR: Failed to generate blog for topic '{topic}': {e}")
                 processing_status = {"current_topic": None, "status": "error"}
-            topic_queue.task_done()
+            finally:
+                topic_queue.task_done()
         time.sleep(5)
 
 # Start the blog generator thread
